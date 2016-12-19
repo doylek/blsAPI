@@ -3,5 +3,7 @@
 export(blsAPI)
 export(blsQCEW)
 import(RCurl)
+import(magrittr)
+import(plyr)
 import(rjson)
 importFrom(utils,read.csv)
