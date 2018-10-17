@@ -8,7 +8,7 @@
 #' @param return_data_frame a boolean if you want to the function to return JSON (default) or a data frame. If the data frame option is used, the series id will be added as a column.  This is helpful if multiple series are selected.
 #' @keywords bls api economics
 #' @export blsAPI
-#' @import rjson RCurl
+#' @import rjson httr
 #' @examples
 #' # These examples are taken from <https://www.bls.gov/developers/api_signature.htm>
 #' library(rjson)
@@ -58,9 +58,7 @@
 #' }
 
 blsAPI <- function(payload=NA, api_version=1, return_data_frame=FALSE){
-  h <- basicTextGatherer()
-  h$reset()
-  if (class(payload) == "logical"){
+   if (class(payload) == "logical"){
     # Payload not defined
     message("blsAPI: No payload specified.")
   }
@@ -71,29 +69,18 @@ blsAPI <- function(payload=NA, api_version=1, return_data_frame=FALSE){
                       "/timeseries/data/")
     if (is.list(payload)){
       # Multiple Series or One or More Series, Specifying Years request
-      payload <- toJSON(payload)
-      m <- regexpr('\\"seriesid\\":\\"[a-zA-Z0-9]*\\",', payload)
-      str <- regmatches(payload, m)
-      if (length(str) > 0){
-        # wrap single series in []
-        replace <- sub(",", "],", sub(":", ":[", str))
-        payload <- sub(str, replace, payload)
-      }
-      curlPerform(url = api_url,
-                  httpheader = c("Content-Type" = "application/json;"),
-                  postfields = payload,
-                  verbose = FALSE,
-                  writefunction = h$update)
+      h <- httr::POST(url = api_url,
+      								body = payload,
+      								encode = 'json'
+                  )
     }
     else{
       # Single Series request
-      curlPerform(url = paste0(api_url, payload),
-                  verbose = FALSE,
-                  writefunction = h$update)
+    	h <- httr::GET(url = paste0(api_url, payload))
     }
     # Return the results of the API call
     if (return_data_frame){
-      json <- fromJSON(h$value())
+      json <- fromJSON(rawToChar(h$content))
       if (json$status != "REQUEST_SUCCEEDED") {
 				stop(paste("blsAPI call failed",
 				           paste(json$message, collapse = ";"),
@@ -138,7 +125,7 @@ blsAPI <- function(payload=NA, api_version=1, return_data_frame=FALSE){
     }
     else {
       # Return the JSON results
-      return(h$value())
+      return(rawToChar(h$content))
     }
   }
 }
