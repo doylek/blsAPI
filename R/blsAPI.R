@@ -69,9 +69,18 @@ blsAPI <- function(payload=NA, api_version=1, return_data_frame=FALSE){
                       "/timeseries/data/")
     if (is.list(payload)){
       # Multiple Series or One or More Series, Specifying Years request
-      h <- httr::POST(url = api_url,
+    	payload <- toJSON(payload)
+    	m <- regexpr('\\"seriesid\\":\\"[a-zA-Z0-9]*\\",', payload)
+    	str <- regmatches(payload, m)
+    	if (length(str) > 0){
+    		# wrap single series in []
+    		replace <- sub(",", "],", sub(":", ":[", str))
+    		payload <- sub(str, replace, payload)
+    	}
+    	
+    	h <- httr::POST(url = api_url,
       								body = payload,
-      								encode = 'json'
+      								httr::content_type_json()
                   )
     }
     else{
